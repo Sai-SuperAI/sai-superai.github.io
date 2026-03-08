@@ -3,7 +3,9 @@ theme: minimal-mistakes-jekyll
 title: "Sai SuperAI"
 description: "AI strategy, practical guides, and applied machine intelligence."
 url: "https://sai-superai.github.io"
-baseurl: ""
+# Set this to your repository name when hosting as a project site on GitHub Pages
+# e.g. if your repo is `Sai-SuperAI`, set baseurl: "/Sai-SuperAI"
+baseurl: "/Sai-SuperAI"
 author:
   name: "Sai SuperAI"
 
