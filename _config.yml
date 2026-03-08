@@ -13,6 +13,7 @@ plugins:
   - jekyll-feed
   - jekyll-seo-tag
   - jekyll-sitemap
+  - jekyll-polyglot
 
 # Main navigation is provided via `_data/navigation.yml` (Minimal Mistakes)
 
@@ -31,3 +32,22 @@ exclude:
   - node_modules
   - vendor
   - .github
+
+# jekyll-polyglot i18n configuration
+languages: ["en", "de"]
+default_lang: "en"
+# Windows hosts: polyglot recommends disabling parallel builds
+parallel_localization: false
+exclude_from_localization:
+  - assets
+  - images
+  - css
+  - public
+  - sitemap.xml
+  - feed.xml
+  - robots.txt
+  - CNAME
+
+# Avoid SCSS sourcemap issues with Jekyll 4 + Polyglot
+sass:
+  sourcemap: never

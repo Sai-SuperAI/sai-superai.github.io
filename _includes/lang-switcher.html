@@ -1,0 +1,15 @@
+{% assign current_lang = site.active_lang | default: site.default_lang %}
+<div class="lang-switcher" style="display:flex; gap:0.5rem; justify-content:flex-end; align-items:center; font-size:0.95rem; margin: 0.5rem 0 1rem 0;">
+  <span style="opacity:0.75;">Language:</span>
+  {% for lang in site.languages %}
+    {% assign is_current = lang == current_lang %}
+    {% capture lang_label %}{% if lang == 'en' %}English{% elsif lang == 'de' %}Deutsch{% else %}{{ lang | upcase }}{% endif %}{% endcapture %}
+    {% comment %}
+      Build the href for this page in the given language.
+      Use page.permalink_lang when available (requires page_id across translations)
+    {% endcomment %}
+    {% capture lang_href %}{{ site.baseurl }}/{% if lang != site.default_lang %}{{ lang }}/{% endif %}{% if page.permalink_lang and page.permalink_lang[lang] %}{{ page.permalink_lang[lang] | replace_first: '/', '' }}{% else %}{{ page.url | replace_first: '/', '' }}{% endif %}{% endcapture %}
+    <a href="{{ lang_href }}" {% if is_current %}aria-current="page"{% endif %}
+       style="padding:0.2rem 0.5rem; border-radius: 8px; text-decoration:none; {% if is_current %}background:#eee; color:inherit; cursor:default;{% else %}background:#f7f7f7;{% endif %}">{{ lang_label }}</a>
+  {% endfor %}
+</div>
