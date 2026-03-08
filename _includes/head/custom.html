@@ -28,7 +28,12 @@
   .greedy-nav .lang-switcher-masthead .lang-pill[aria-current="page"] {
     background: #e6e6e6; cursor: default;
   }
-  .greedy-nav .lang-switcher-masthead .lang-icon { font-size: 1rem; }
+  .greedy-nav .lang-switcher-masthead .lang-icon { font-size: 0.9rem; }
+  .greedy-nav .lang-switcher-masthead .lang-badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    width: 1.45rem; height: 1.45rem; border-radius: 50%;
+    background: #e9ecef; font-weight: 700; font-size: .72rem;
+  }
   @media (max-width: 480px) {
     .greedy-nav .lang-switcher-masthead .lang-label { display:none; }
   }
@@ -45,11 +50,14 @@
       var current = '{{ site.active_lang | default: site.default_lang }}';
       {% for lang in site.languages %}
         {% capture lang_label %}{% if lang == 'en' %}English{% elsif lang == 'de' %}Deutsch{% else %}{{ lang | upcase }}{% endif %}{% endcapture %}
-        {% capture lang_emoji %}{% if lang == 'en' %}🌐{% elsif lang == 'de' %}🇩🇪{% else %}🌐{% endif %}{% endcapture %}
-        {% capture lang_href %}{{ site.baseurl }}/{% if lang != site.default_lang %}{{ lang }}/{% endif %}{% if page.permalink_lang and page.permalink_lang[lang] %}{{ page.permalink_lang[lang] | replace_first: '/', '' }}{% else %}{{ page.url | replace_first: '/', '' }}{% endif %}{% endcapture %}
-        html += '<a class="lang-pill" href="{{ lang_href | strip }}"'+(current==='{{ lang }}'?' aria-current="page"':'')+'>'+
-                '<span class="lang-icon">{{ lang_emoji | strip }}</span>'+
-                '<span class="lang-label">{{ lang_label | escape }}</span>'+
+        {% capture lang_badge %}{{ lang | upcase | slice: 0,2 }}{% endcapture %}
+        {% capture tail %}{% if page.permalink_lang and page.permalink_lang[lang] %}{{ page.permalink_lang[lang] }}{% elsif page.permalink %}{{ page.permalink }}{% else %}{{ page.url }}{% endif %}{% endcapture %}
+        {% assign clean_tail = tail | strip %}
+        {% capture normalized_tail %}{% if clean_tail == '/' %}{% else %}{{ clean_tail | replace_first: '/', '' }}{% endif %}{% endcapture %}
+        {% capture href %}{{ site.baseurl }}/{% if lang != site.default_lang %}{{ lang }}/{% endif %}{{ normalized_tail | strip }}{% endcapture %}
+        html += '<a class="lang-pill" href="{{ href | strip }}"'+(current==='{{ lang }}'?' aria-current="page"':'')+'>'+
+                '<span class="lang-badge">{{ lang_badge | strip }}</span>'+
+                '<span class="lang-label"> {{ lang_label | escape }}</span>'+
                 '</a>';
       {% endfor %}
       return html;
