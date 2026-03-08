@@ -1,0 +1,9 @@
+{% comment %}
+  Custom head additions:
+  - Add Polyglot i18n headers (hreflang/canonical)
+  - Ensure CSS link is not language-relativized (prevents /de/assets/... 404)
+{% endcomment %}
+
+{{ I18n_Headers }}
+
+<link {% static_href %}href="{{ '/assets/css/main.css' | relative_url }}"{% endstatic_href %} rel="stylesheet">
