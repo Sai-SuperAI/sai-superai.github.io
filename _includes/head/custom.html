@@ -55,7 +55,7 @@
         {% assign clean_tail = tail | strip %}
         {% capture normalized_tail %}{% if clean_tail == '/' %}{% else %}{{ clean_tail | replace_first: '/', '' }}{% endif %}{% endcapture %}
         {% capture href %}{{ site.baseurl }}/{% if lang != site.default_lang %}{{ lang }}/{% endif %}{{ normalized_tail | strip }}{% endcapture %}
-        html += '<a class="lang-pill" href="{{ href | strip }}"'+(current==='{{ lang }}'?' aria-current="page"':'')+'>'+
+        html += '<a class="lang-pill" {% static_href %}href="{{ href | strip }}"{% endstatic_href %}'+(current==='{{ lang }}'?' aria-current="page"':'')+'>'+
                 '<span class="lang-badge">{{ lang_badge | strip }}</span>'+
                 '<span class="lang-label"> {{ lang_label | escape }}</span>'+
                 '</a>';
