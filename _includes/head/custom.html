@@ -47,42 +47,71 @@
   .greedy-nav a { display: inline-flex; align-items: center; gap: .25rem; }
 </style>
 
+{%- comment -%}
+  Precompute language URLs with Liquid, then wire them at runtime so Polyglot
+  can't rewrite the anchors (no href exists until JS runs).
+{%- endcomment -%}
+{% assign this_id = page.page_id %}
+{% assign en_doc = site.pages | where: 'page_id', this_id | where: 'lang', 'en' | first %}
+{% if en_doc == nil %}{% assign en_doc = site.posts | where: 'page_id', this_id | where: 'lang', 'en' | first %}{% endif %}
+{% assign de_doc = site.pages | where: 'page_id', this_id | where: 'lang', 'de' | first %}
+{% if de_doc == nil %}{% assign de_doc = site.posts | where: 'page_id', this_id | where: 'lang', 'de' | first %}{% endif %}
+{% assign en_url = en_doc.url | default: '/' | relative_url %}
+{% assign de_url = de_doc.url | default: '/de/' | relative_url %}
+
+<script id="lang-urls" type="application/json">{"en":"{{ en_url }}","de":"{{ de_url }}"}</script>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     var nav = document.querySelector('.masthead .greedy-nav');
     if (!nav) return;
 
-    // Build absolute URLs for EN/DE versions of the current document
-    var urls = {
-      en: '{{ site.baseurl }}{% if page.page_id %}{% assign tail_en = '' %}{% assign en_doc = site.pages | where: 'page_id', page.page_id | where: 'lang', 'en' | first %}{% if en_doc == nil %}{% assign en_doc = site.posts | where: 'page_id', page.page_id | where: 'lang', 'en' | first %}{% endif %}{% if en_doc %}{% assign tail_en = en_doc.url %}{% else %}{% assign tail_en = '/' %}{% endif %}{{ tail_en }}{% else %}{{ page.url }}{% endif %}',
-      de: '{{ site.baseurl }}{% if page.page_id %}{% assign tail_de = '' %}{% assign de_doc = site.pages | where: 'page_id', page.page_id | where: 'lang', 'de' | first %}{% if de_doc == nil %}{% assign de_doc = site.posts | where: 'page_id', page.page_id | where: 'lang', 'de' | first %}{% endif %}{% if de_doc %}{% assign tail_de = de_doc.url %}{% else %}{% assign tail_de = '/de/' %}{% endif %}{{ tail_de }}{% else %}/de/{{ page.url | replace_first: '/', '' }}{% endif %}'
-    };
+    // Read precomputed URLs
+    var urls = { en: '/', de: '/de/' };
+    try {
+      var data = document.getElementById('lang-urls');
+      if (data && data.textContent) urls = JSON.parse(data.textContent);
+    } catch(e) {}
 
     var currentLang = document.documentElement.getAttribute('lang') || '{{ site.default_lang }}';
 
-    // Dropdown wrapper
+    // Build dropdown DOM nodes to avoid Polyglot touching hrefs
     var dd = document.createElement('div');
     dd.className = 'lang-dd';
-    dd.innerHTML = [
-      '<button type="button" class="lang-toggle" aria-haspopup="true" aria-expanded="false" aria-label="Language">',
-      '  <i class="fa-solid fa-globe"></i>',
-      '  <span class="curr">'+ (currentLang === 'de' ? 'DE' : 'EN') +'</span>',
-      '  <i class="fa-solid fa-chevron-down" style="font-size:.8rem;opacity:.8"></i>',
-      '</button>',
-      '<div class="menu" role="menu">',
-      currentLang === 'en'
-        ? '<span class="disabled" role="menuitem" aria-current="true"><span class="flag">🇬🇧</span> English</span>'+
-          '<a role="menuitem" {% static_href %}href="'+ urls.de +'"{% endstatic_href %}><span class="flag">🇩🇪</span> Deutsch</a>'
-        : '<a role="menuitem" {% static_href %}href="'+ urls.en +'"{% endstatic_href %}><span class="flag">🇬🇧</span> English</a>'+
-          '<span class="disabled" role="menuitem" aria-current="true"><span class="flag">🇩🇪</span> Deutsch</span>',
-      '</div>'
-    ].join('');
 
-    nav.appendChild(dd);
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'lang-toggle';
+    btn.setAttribute('aria-haspopup','true'); btn.setAttribute('aria-expanded','false'); btn.setAttribute('aria-label','Language');
+    btn.innerHTML = '<i class="fa-solid fa-globe"></i> <span class="curr">'+ (currentLang === 'de' ? 'DE' : 'EN') +'</span> <i class="fa-solid fa-chevron-down" style="font-size:.8rem;opacity:.8"></i>';
+
+    var menu = document.createElement('div');
+    menu.className = 'menu'; menu.setAttribute('role','menu');
+
+    function addItem(code, label, flag, href, disabled){
+      if (disabled) {
+        var s = document.createElement('span');
+        s.className = 'disabled'; s.setAttribute('role','menuitem'); s.setAttribute('aria-current','true');
+        s.innerHTML = '<span class="flag">'+flag+'</span> '+label;
+        menu.appendChild(s);
+      } else {
+        var a = document.createElement('a');
+        a.setAttribute('role','menuitem'); a.href = href; // set after build time to avoid polyglot rewriting
+        a.innerHTML = '<span class="flag">'+flag+'</span> '+label;
+        menu.appendChild(a);
+      }
+    }
+
+    if (currentLang === 'en') {
+      addItem('en','English','🇬🇧', urls.en, true);
+      addItem('de','Deutsch','🇩🇪', urls.de, false);
+    } else {
+      addItem('en','English','🇬🇧', urls.en, false);
+      addItem('de','Deutsch','🇩🇪', urls.de, true);
+    }
+
+    dd.appendChild(btn); dd.appendChild(menu); nav.appendChild(dd);
 
     // Toggle logic
-    var btn = dd.querySelector('button.lang-toggle');
-    var menu = dd.querySelector('.menu');
     btn.addEventListener('click', function(){
       var open = dd.classList.toggle('open');
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
