@@ -66,14 +66,21 @@
     var nav = document.querySelector('.masthead .greedy-nav');
     if (!nav) return;
 
-    // Read precomputed URLs
-    var urls = { en: '/', de: '/de/' };
-    try {
-      var data = document.getElementById('lang-urls');
-      if (data && data.textContent) urls = JSON.parse(data.textContent);
-    } catch(e) {}
+    // Build robust URLs from current location to avoid reliance on page.url
+    var path = window.location.pathname || '/';
+    var base = '{{ site.baseurl }}';
+    if (base && path.startsWith(base)) path = path.slice(base.length) || '/';
+    var isDe = path === '/de' || path.startsWith('/de/');
+    var tail = isDe ? path.slice(3) || '/' : path; // strip leading /de
+    if (!tail.startsWith('/')) tail = '/' + tail;
 
-    var currentLang = document.documentElement.getAttribute('lang') || '{{ site.default_lang }}';
+    var urls = {
+      en: base + (tail === '' ? '/' : tail),
+      de: base + '/de' + (tail === '/' ? '/' : tail)
+    };
+
+    // Detect current language by URL prefix first (more reliable than <html lang>)
+    var currentLang = isDe ? 'de' : 'en';
 
     // Build dropdown DOM nodes to avoid Polyglot touching hrefs
     var dd = document.createElement('div');
@@ -87,26 +94,26 @@
     var menu = document.createElement('div');
     menu.className = 'menu'; menu.setAttribute('role','menu');
 
-    function addItem(code, label, flag, href, disabled){
+    function addItem(code, label, badge, href, disabled){
       if (disabled) {
         var s = document.createElement('span');
         s.className = 'disabled'; s.setAttribute('role','menuitem'); s.setAttribute('aria-current','true');
-        s.innerHTML = '<span class="flag">'+flag+'</span> '+label;
+        s.innerHTML = '<span class="flag">'+badge+'</span> '+label;
         menu.appendChild(s);
       } else {
         var a = document.createElement('a');
         a.setAttribute('role','menuitem'); a.href = href; // set after build time to avoid polyglot rewriting
-        a.innerHTML = '<span class="flag">'+flag+'</span> '+label;
+        a.innerHTML = '<span class="flag">'+badge+'</span> '+label;
         menu.appendChild(a);
       }
     }
 
     if (currentLang === 'en') {
-      addItem('en','English','🇬🇧', urls.en, true);
-      addItem('de','Deutsch','🇩🇪', urls.de, false);
+      addItem('en','English','EN', urls.en, true);
+      addItem('de','Deutsch','DE', urls.de, false);
     } else {
-      addItem('en','English','🇬🇧', urls.en, false);
-      addItem('de','Deutsch','🇩🇪', urls.de, true);
+      addItem('en','English','EN', urls.en, false);
+      addItem('de','Deutsch','DE', urls.de, true);
     }
 
     dd.appendChild(btn); dd.appendChild(menu); nav.appendChild(dd);
