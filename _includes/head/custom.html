@@ -7,61 +7,88 @@
 {{ I18n_Headers }}
 
 <link {% static_href %}href="{{ '/assets/css/main.css' | relative_url }}"{% endstatic_href %} rel="stylesheet">
+<!-- Font Awesome for small UI icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer" />
 
 <style>
-  /* Top-right language switcher in masthead */
+  /* Masthead layout helpers */
   .greedy-nav { display: flex; align-items: center; }
-  .greedy-nav .lang-switcher-masthead {
-    margin-left: auto;
-    display: inline-flex;
-    gap: .35rem;
-    align-items: center;
-    white-space: nowrap;
+
+  /* Top-right language dropdown switcher */
+  .lang-dd { position: relative; margin-left: auto; }
+  .lang-dd button.lang-toggle {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .35rem .6rem; border-radius: 999px; border: 1px solid rgba(0,0,0,.08);
+    background: #f7f7f8; color: inherit; cursor: pointer; font-weight: 600;
   }
-  .greedy-nav .lang-switcher-masthead .lang-pill {
-    display: inline-flex; align-items: center; gap: .25rem;
-    padding: .22rem .5rem; border-radius: 999px;
-    background: var(--lang-pill-bg, #f2f2f2); color: inherit;
-    text-decoration: none; font-size: .9rem; line-height: 1;
-    border: 1px solid rgba(0,0,0,.08);
+  .lang-dd button.lang-toggle .fa-globe { opacity: .85; }
+  .lang-dd button.lang-toggle .curr { font-size: .85rem; letter-spacing: .02em; }
+  .lang-dd .menu {
+    position: absolute; right: 0; top: 110%; min-width: 10rem; z-index: 50;
+    background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: .5rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08); padding: .35rem; display: none;
   }
-  .greedy-nav .lang-switcher-masthead .lang-pill[aria-current="page"] {
-    background: #e6e6e6; cursor: default;
+  .lang-dd.open .menu { display: block; }
+  .lang-dd .menu a, .lang-dd .menu span.disabled {
+    display: flex; align-items: center; gap: .6rem; padding: .5rem .6rem; border-radius: .4rem;
+    color: inherit; text-decoration: none; font-weight: 600; white-space: nowrap;
   }
-  .greedy-nav .lang-switcher-masthead .lang-icon { font-size: 0.9rem; }
-  .greedy-nav .lang-switcher-masthead .lang-badge {
-    display:inline-flex; align-items:center; justify-content:center;
-    width: 1.45rem; height: 1.45rem; border-radius: 50%;
-    background: #e9ecef; font-weight: 700; font-size: .72rem;
-  }
-  @media (max-width: 480px) {
-    .greedy-nav .lang-switcher-masthead .lang-label { display:none; }
-  }
+  .lang-dd .menu a:hover { background: #f1f5f9; }
+  .lang-dd .flag { width: 1.1rem; height: 1.1rem; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; }
+  .lang-dd .disabled { opacity: .6; cursor: default; }
+
+  /* Add subtle icons to primary nav links */
+  .greedy-nav a[href="/"]::before { font: normal 900 0.95rem/0 'Font Awesome 6 Free'; content: "\f015"; margin-right: .4rem; }
+  .greedy-nav a[href$="/about/"]::before { font: normal 900 0.95rem/0 'Font Awesome 6 Free'; content: "\f05a"; margin-right: .4rem; }
+  .greedy-nav a[href$="/faq/"]::before { font: normal 900 0.95rem/0 'Font Awesome 6 Free'; content: "\f059"; margin-right: .4rem; }
+  .greedy-nav a[href$="/tags/"]::before { font: normal 900 0.95rem/0 'Font Awesome 6 Free'; content: "\f02c"; margin-right: .4rem; }
+  .greedy-nav a[href$="/search/"]::before { font: normal 900 0.95rem/0 'Font Awesome 6 Free'; content: "\f002"; margin-right: .4rem; }
+  /* Ensure icons don't push text to new line on narrow widths */
+  .greedy-nav a { display: inline-flex; align-items: center; gap: .25rem; }
 </style>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     var nav = document.querySelector('.masthead .greedy-nav');
     if (!nav) return;
-    var wrap = document.createElement('div');
-    wrap.className = 'lang-switcher-masthead';
-    wrap.innerHTML = (function(){
-      var html = '';
-      var current = '{{ site.active_lang | default: site.default_lang }}';
-      {% for lang in site.languages %}
-        {% capture lang_label %}{% if lang == 'en' %}English{% elsif lang == 'de' %}Deutsch{% else %}{{ lang | upcase }}{% endif %}{% endcapture %}
-        {% capture lang_badge %}{{ lang | upcase | slice: 0,2 }}{% endcapture %}
-        {% capture tail %}{% if page.permalink_lang and page.permalink_lang[lang] %}{{ page.permalink_lang[lang] }}{% elsif page.permalink %}{{ page.permalink }}{% else %}{{ page.url }}{% endif %}{% endcapture %}
-        {% assign clean_tail = tail | strip %}
-        {% capture normalized_tail %}{% if clean_tail == '/' %}{% else %}{{ clean_tail | replace_first: '/', '' }}{% endif %}{% endcapture %}
-        {% capture href %}{{ site.baseurl }}/{% if lang != site.default_lang %}{{ lang }}/{% endif %}{{ normalized_tail | strip }}{% endcapture %}
-        html += '<a class="lang-pill" {% static_href %}href="{{ href | strip }}"{% endstatic_href %}'+(current==='{{ lang }}'?' aria-current="page"':'')+'>'+
-                '<span class="lang-badge">{{ lang_badge | strip }}</span>'+
-                '<span class="lang-label"> {{ lang_label | escape }}</span>'+
-                '</a>';
-      {% endfor %}
-      return html;
-    })();
-    nav.appendChild(wrap);
+
+    // Build absolute URLs for EN/DE versions of the current document
+    var urls = {
+      en: '{{ site.baseurl }}{% if page.page_id %}{% assign tail_en = '' %}{% assign en_doc = site.pages | where: 'page_id', page.page_id | where: 'lang', 'en' | first %}{% if en_doc == nil %}{% assign en_doc = site.posts | where: 'page_id', page.page_id | where: 'lang', 'en' | first %}{% endif %}{% if en_doc %}{% assign tail_en = en_doc.url %}{% else %}{% assign tail_en = '/' %}{% endif %}{{ tail_en }}{% else %}{{ page.url }}{% endif %}',
+      de: '{{ site.baseurl }}{% if page.page_id %}{% assign tail_de = '' %}{% assign de_doc = site.pages | where: 'page_id', page.page_id | where: 'lang', 'de' | first %}{% if de_doc == nil %}{% assign de_doc = site.posts | where: 'page_id', page.page_id | where: 'lang', 'de' | first %}{% endif %}{% if de_doc %}{% assign tail_de = de_doc.url %}{% else %}{% assign tail_de = '/de/' %}{% endif %}{{ tail_de }}{% else %}/de/{{ page.url | replace_first: '/', '' }}{% endif %}'
+    };
+
+    var currentLang = document.documentElement.getAttribute('lang') || '{{ site.default_lang }}';
+
+    // Dropdown wrapper
+    var dd = document.createElement('div');
+    dd.className = 'lang-dd';
+    dd.innerHTML = [
+      '<button type="button" class="lang-toggle" aria-haspopup="true" aria-expanded="false" aria-label="Language">',
+      '  <i class="fa-solid fa-globe"></i>',
+      '  <span class="curr">'+ (currentLang === 'de' ? 'DE' : 'EN') +'</span>',
+      '  <i class="fa-solid fa-chevron-down" style="font-size:.8rem;opacity:.8"></i>',
+      '</button>',
+      '<div class="menu" role="menu">',
+      currentLang === 'en'
+        ? '<span class="disabled" role="menuitem" aria-current="true"><span class="flag">🇬🇧</span> English</span>'+
+          '<a role="menuitem" {% static_href %}href="'+ urls.de +'"{% endstatic_href %}><span class="flag">🇩🇪</span> Deutsch</a>'
+        : '<a role="menuitem" {% static_href %}href="'+ urls.en +'"{% endstatic_href %}><span class="flag">🇬🇧</span> English</a>'+
+          '<span class="disabled" role="menuitem" aria-current="true"><span class="flag">🇩🇪</span> Deutsch</span>',
+      '</div>'
+    ].join('');
+
+    nav.appendChild(dd);
+
+    // Toggle logic
+    var btn = dd.querySelector('button.lang-toggle');
+    var menu = dd.querySelector('.menu');
+    btn.addEventListener('click', function(){
+      var open = dd.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', function(e){
+      if (!dd.contains(e.target)) { dd.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
+    });
   });
 </script>
